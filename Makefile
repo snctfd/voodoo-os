@@ -20,7 +20,6 @@ bootloader_stage1.bin: force_look
 voodoo_os.img:
 	dd if=/dev/zero of=voodoo_os.img bs=516096c count=1000
 
-
 	(echo n; echo p; echo 1; echo ""; echo ""; echo t; echo c; echo a; echo w;)\
 	 | sudo fdisk -u -C1000 -S63 -H16 voodoo_os.img
 
