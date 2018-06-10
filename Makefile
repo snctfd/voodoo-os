@@ -55,7 +55,7 @@ voodoo_os.flp: compile voodoo_os.img
 compile: bootloader
 
 clean:
-	cd src/bootloader $(MAKE) clean
+	cd src/bootloader; $(MAKE) clean
 
 	rm -f *.bin
 	rm -f voodoo_os.img
