@@ -1,0 +1,4 @@
+Stack
+-------------
+
+The stack starts at 0x0:0x2000.

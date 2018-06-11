@@ -10,14 +10,17 @@ export ASMOPS = -w+all -f bin
 
 LOOPBACKDEVICE != sudo losetup -f
 
-default: voodoo_os.flp
+default: voodoo_os.img
 
-bootloader: bootloader_stage1.bin
+bootloader: bootloader_stage1.bin bootloader_stage2.bin
 
 bootloader_stage1.bin: force_look
 	cd src/bootloader; $(MAKE) bootloader_stage1.bin
 
-voodoo_os.img:
+bootloader_stage2.bin: force_look
+	cd src/bootloader; $(MAKE) bootloader_stage2.bin
+
+voodoo_os.img: compile
 	dd if=/dev/zero of=voodoo_os.img bs=516096c count=1000
 
 	(echo n; echo p; echo 1; echo ""; echo ""; echo t; echo c; echo a; echo w;)\
@@ -33,10 +36,10 @@ voodoo_os.img:
 # a:  Toggle bootable flag
 # w:  Write changes to disk
 
-voodoo_os.flp: compile voodoo_os.img 
 	mkdir -p mnt/fake/
 	
 	dd if=src/bootloader/bootloader_stage1.bin of=voodoo_os.img conv=notrunc
+	dd if=src/bootloader/bootloader_stage2.bin of=voodoo_os.img conv=notrunc seek=1
 
 	sudo losetup -o1048576 $(LOOPBACKDEVICE) voodoo_os.img
 	sudo mkdosfs -v -F32 $(LOOPBACKDEVICE)
