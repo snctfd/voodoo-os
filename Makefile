@@ -41,7 +41,7 @@ voodoo_os.img: compile
 	dd if=src/bootloader/bootloader_stage1.bin of=voodoo_os.img conv=notrunc
 	dd if=src/bootloader/bootloader_stage2.bin of=voodoo_os.img conv=notrunc seek=1
 
-	sudo losetup -o1048576 $(LOOPBACKDEVICE) voodoo_os.img
+	sudo losetup -o1MiB $(LOOPBACKDEVICE) voodoo_os.img
 	sudo mkdosfs -v -F32 $(LOOPBACKDEVICE)
 	sudo mount -t vfat $(LOOPBACKDEVICE) mnt/fake/ 
 
@@ -50,7 +50,7 @@ voodoo_os.img: compile
 	sudo mkdir mnt/fake/dev/
 	sudo mkdir mnt/fake/proc/
 
-	sleep 1
+	sleep 0.1
 
 	sudo umount mnt/fake/
 	sudo losetup -d $(LOOPBACKDEVICE)

@@ -7,8 +7,6 @@
 ; 
 ;--------------------------------------------------
 
-org 0x2100
-
 bits 16
 
 jmp stage2_start
@@ -18,6 +16,9 @@ start_msg db "RUNNING STAGE 2 OF BOOTLOADER...", 0
 %include "util.S"
 
 stage2_start:
+    mov ax, 0x210
+    mov ds, ax
+
     mov si, start_msg
     call print_line
 

@@ -14,9 +14,9 @@ org 0x7C00 ; Initial load is at 0x7C00
 
 bits 16    ; We're in 16 bit mode
 
-jmp init_bootloader
+jmp 0:init_bootloader
 
-start_msg     db "RUNNING STAGE 1 OF BOOTLADER...", 0
+start_msg     db "RUNNING STAGE 1 OF BOOTLOADER...", 0
 no_edr_msg    db "BIOS EXTENSIONS NOT SUPPORTED", 0
 read_fail_msg db "FAILED TO READ FROM DISK", 0
 stage2_msg    db "READY TO LOAD STAGE 2", 0
@@ -25,12 +25,12 @@ crash_msg     db "FUCK", 0
 %include "util.S"
 
 init_bootloader:
-
     ; Setup stack and data segment
     xor ax, ax
-    mov ss, ax
     mov ds, ax
-    mov sp, 0x2000 ; Allocate 2K for stack
+    mov es, ax
+    mov ss, ax
+    mov sp, 0x2000 ; Stack is from 0x1800 to 0x2000
 
     push dx ; Save boot disk ID
 
@@ -62,11 +62,11 @@ init_bootloader:
     int 0x13
 
     jc edd_not_supported
-
-    pop dx ; Fetch boot disk ID
-
+    
     mov si, stage2_msg
     call print_line
+
+    pop dx ; Fetch boot disk ID
 
     ; Read stage 2 from the disk
     mov ah, 0x42
@@ -105,5 +105,3 @@ DISK_ADDRESS_PACKET:
 
 times 446 - ($-$$) db 0 ; Make sure file is 446 bytes
                         ; by filling the rest with 0s
-
-dw 0xAA55 ; The BIOS boot signature
