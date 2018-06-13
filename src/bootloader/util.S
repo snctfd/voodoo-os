@@ -10,13 +10,30 @@
 ;--------------------------------------------------
 ; print_line
 ; 
-; Prints a line. Quite shocking, really.
+; Prints a string, followed by a newline.
 ; Arguments:
 ; DS:SI should contain the address of a null-
 ; terminated string.
 ;--------------------------------------------------
 
 print_line:
+    call print_string
+    call new_line
+
+    ret
+
+
+
+;--------------------------------------------------
+; print_string
+; 
+; Prints a string. Quite shocking, really.
+; Arguments:
+; DS:SI should contain the address of a null-
+; terminated string.
+;--------------------------------------------------
+
+print_string:
     cld ; Make sure we're moving the right direction
 .loop:
     lodsb               ; Loads a byte from the string to AL
@@ -26,9 +43,15 @@ print_line:
     int 0x10
     jmp .loop
 .done:
-    call new_line
-
     ret
+
+
+
+;--------------------------------------------------
+; new_line
+; 
+; Prints a newline.
+;--------------------------------------------------
 new_line:
     mov ah, 0x0E
     mov al, 0x0A ; Line feed
