@@ -21,7 +21,7 @@ bootloader_stage2.bin: force_look
 	cd src/bootloader; $(MAKE) bootloader_stage2.bin
 
 voodoo_os.img: compile
-	dd if=/dev/zero of=voodoo_os.img bs=516096c count=1000
+	dd if=/dev/zero of=voodoo_os.img bs=504K count=1000
 
 	(echo n; echo p; echo 1; echo ""; echo ""; echo t; echo c; echo a; echo w;)\
 	 | sudo fdisk -u -C1000 -S63 -H16 voodoo_os.img
