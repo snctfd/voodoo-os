@@ -22,5 +22,10 @@ stage2_start:
     mov si, start_msg
     call print_line
 
+    ; Enable A20 Line
+    in al, 0x92
+    or al, 2
+    out 0x92, al
+
     cli
     hlt
