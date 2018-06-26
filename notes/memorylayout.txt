@@ -1,4 +1,4 @@
-Stack
+Kernel
 -------------
 
-The stack starts at 0x0:0x2000.
+The kernel is loaded in at 0x400:0. 

@@ -1,6 +1,4 @@
 
-* Enable A20
-* Setup segments
 * Find kernel
 * Load kernel
 * Enable protected mode

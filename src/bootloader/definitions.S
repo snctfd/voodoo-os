@@ -1,1 +1,0 @@
-%define KERNEL_SEGMENT 0x400
