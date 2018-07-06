@@ -7,7 +7,7 @@ CROSS_COMPILER_TARGET ?= i686-elf
 ASSEMBLER ?= $(CROSS_COMPILER_TARGET)-as
 LINKER ?= $(CROSS_COMPILER_TARGET)-ld
 
-ASMOPS ?= -wall -msyntax=intel
+ASMOPS ?= -msyntax=intel
 LINKOPS = --oformat binary
 
 bootloader_stage1.bin: bootloader_stage1.S

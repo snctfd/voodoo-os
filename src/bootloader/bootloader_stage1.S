@@ -33,7 +33,7 @@ init_bootloader:
     mov ds, ax
     mov es, ax
     mov ss, ax
-    mov sp, 0x2000 /* Stack is from 0x1800 to 0x2000 */
+    mov sp, 0x1500
 
     push dx /* Save boot disk ID */
 

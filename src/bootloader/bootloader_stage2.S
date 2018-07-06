@@ -41,20 +41,28 @@ crash_msg:            .asciz "FUCK"
  * disk_read
  * 
  * Reads data from the disk based on the contents of
- * DISK_ADDRESS_PACKET. Assumes DL contains the ID of
- * the boot disk.
+ * DISK_ADDRESS_PACKET.
  * --------------------------------------------------
  */
 disk_read:
-    mov dx, [disk_identifier]
+    push dx
+    push ax
+    push si
+
+    mov dl, [disk_identifier]
     mov ah, 0x42
     mov si, offset DISK_ADDRESS_PACKET
     int 0x13
 
-    jc .read_fail
+    jc 1f /* Error occurred */
+    
+    pop si
+    pop ax
+    pop dx
+
     ret
 
-.read_fail:
+1:
     mov si, offset err_read_fail
     jmp crash
 
@@ -92,76 +100,76 @@ check_bpb_vals:
     mov ah, [bpb_secs_per_clus]
 
     cmp ah, 1
-    je .spc_valid
+    je 1f
 
     cmp ah, 2
-    je .spc_valid
+    je 1f
 
     cmp ah, 4
-    je .spc_valid
+    je 1f
 
     cmp ah, 8
-    je .spc_valid
+    je 1f
 
     cmp ah, 16
-    je .spc_valid
+    je 1f
 
     cmp ah, 32
-    je .spc_valid
+    je 1f
 
     cmp ah, 64
-    je .spc_valid
+    je 1f
 
     cmp ah, 128
-    je .spc_valid
+    je 1f
     
     /* Sectors per cluster was not valid */
     mov si, offset err_spc_invalid
     jmp crash
 
-.spc_valid:
+1:
 
     /* Second variable: Reserved sector count */
     /* Allowed values: Any non-zero number */
 
     mov ax, [bpb_rsvd_sec_cnt]
     cmp ax, 0
-    jne .rsc_valid
+    jne 1f
 
     /* Sectors per cluster was not valid */
     mov si, offset err_rsc_invalid
     jmp crash
 
-.rsc_valid:
+1:
     
     /* Third variable: Number of FATs on the volume */
     /* Allowed values: Any non-zero number */
 
     mov ah, [bpb_fat_cnt]
     cmp ah, 0
-    jne .fc_valid
+    jne 1f
 
     /* Sectors per cluster was not valid */
     mov si, offset err_fc_invalid
     jmp crash
 
-.fc_valid:
+1:
 
     /* Fourth variable: Number of sectors occupied by each FAT */
     /* Allowed values: Any non-zero number */
 
     mov ax, [bpb_secs_per_fat_low]
     cmp ax, 0
-    jne .spf_valid
+    jne 1f
 
     mov ax, [bpb_secs_per_fat_high]
     cmp ax, 0
-    jne .spf_valid
+    jne 1f
 
     mov si, offset err_spf_invalid
     jmp crash
 
-.spf_valid:
+1:
     ret
 /*
  * --------------------------------------------------
@@ -178,13 +186,14 @@ check_bpb_vals:
  */
 cluster_to_lba:
     push cx
+    push dx
 
     /* SECTOR_LBA = ((CLUSTER - 2) * SECS_PER_CLUS) + DATA_LBA */
     movzx cx, byte ptr [bpb_secs_per_clus]
     sub ax, 2
-    jno .no_overflow_1
+    jno 1f
     sub bx, 1 /* Adjust for overflow */
-.no_overflow_1:
+1:
     mul cx
     push ax /* Store low byte */
     mov ax, bx
@@ -195,12 +204,13 @@ cluster_to_lba:
     pop ax
     mov cx, [data_lba_low]
     add ax, cx
-    jno .no_overflow_2
+    jno 1f
     add bx, 1 /* Adjust for overflow */
-.no_overflow_2:
+1:
     mov cx, [data_lba_high]
     add ax, cx
 
+    pop dx
     pop cx
     ret
 
@@ -214,7 +224,7 @@ stage2_start:
     mov ax, DISKBUFFER_SEG
     mov gs, ax
 
-    mov [disk_identifier], dx
+    mov [disk_identifier], dl
 
     call new_line
     mov si, offset inf_start_msg
@@ -279,18 +289,18 @@ stage2_start:
     mov [fat_lba_low], ax
 
     mov ax, [partition_lba_high]
-    jno .no_overflow_fat_lba
+    jno 1f
     add ax, 1 /* Adjust for overflow */
-.no_overflow_fat_lba:
+1:
     mov [fat_lba_high], ax
 
     /* DATA_LBA = FAT_LBA + (FAT_COUNT * FAT_SIZE) */
-    mov ax, [bpb_rootcluster_low]
+    mov ax, [bpb_secs_per_fat_low]
     movzx bx, byte ptr [bpb_fat_cnt]
     mul bx
     mov [data_lba_low], ax
     mov cx, dx /* Store upper word */
-    mov ax, [bpb_rootcluster_high]
+    mov ax, [bpb_secs_per_fat_high]
     mul bx
     add ax, cx /* Add upper word from last calculation */
     mov [data_lba_high], ax
@@ -303,9 +313,9 @@ stage2_start:
     
     mov ax, [data_lba_high]
     mov bx, [fat_lba_high]
-    jno .no_overflow_data_lba
+    jno 1f
     add ax, 1 /* Adjust for overflow in low word addition */
-.no_overflow_data_lba:
+1:
     add ax, bx
     mov [data_lba_high], ax 
 
@@ -334,51 +344,53 @@ stage2_start:
 
     xor ax, ax /* AX contains the number of the current dir entry */
     xor bx, bx /* BX contains the first byte of the current dir entry */
-    .read_entry:
+    .Lread_entry:
+        call print_dirname /* For debugging */
+
         /* First byte of the directory entry */
         mov dx, gs:[DISKBUFFER_OFFSET + bx] 
         cmp dh, 0       /* We've run out of root directory! This is bad. */
         je kernel_not_found /* Abandon ship! D: */
 
         cmp dx, 0x454B   /* EK */
-        jne .next_entry
+        jne .Lnext_entry
         
         mov dx, gs:[DISKBUFFER_OFFSET + bx + 2]
         
         cmp dx, 0x4E52   /* NR */
-        jne .next_entry
+        jne .Lnext_entry
 
         mov dx, gs:[DISKBUFFER_OFFSET + bx + 4]
         
         cmp dx, 0x4C45   /* LE */
-        jne .next_entry
+        jne .Lnext_entry
 
         mov dx, gs:[DISKBUFFER_OFFSET + bx + 6] 
         
         cmp dx, 0x2020   /* Space, space */
-        jne .next_entry
+        jne .Lnext_entry
 
         mov dx, gs:[DISKBUFFER_OFFSET + bx + 8] 
         
         cmp dx, 0x4942   /* IB */
-        jne .next_entry
+        jne .Lnext_entry
 
         mov dh, gs:[DISKBUFFER_OFFSET + bx + 10] 
 
         cmp dh, 0x4E     /* N */
-        je .kernel_found
+        je .Lkernel_found
 
-    .next_entry:
+    .Lnext_entry:
         inc ax
         mov cx, [entries_per_clus]
         cmp ax, cx
-        jae .next_cluster
+        jae .Lnext_cluster
 
         add bx, 32
 
-        jmp .read_entry
+        jmp .Lread_entry
 
-    .next_cluster:
+    .Lnext_cluster:
         /* TODO support FATs that span across more than */
         /* 2 bytes worth of blocks */
         /* This will involve major pain-in-the-ass arithmetic */
@@ -402,7 +414,7 @@ stage2_start:
         mov bx, gs:[DISKBUFFER_OFFSET + bx + 2] /* High word */
 
         cmp bx, 0x0FFF
-        jl .good
+        jl 1f
 
         /* Uh oh, we might be in trouble */
         /* Are we though? */
@@ -414,7 +426,7 @@ stage2_start:
         jge kernel_not_found
 
         /* Nah, we good */
-    .good:
+    1:
         mov [current_cluster_low], ax
         mov [current_cluster_high], bx
         call cluster_to_lba
@@ -430,14 +442,44 @@ stage2_start:
         xor ax, ax
         xor bx, bx
 
-        jmp .read_entry
+        jmp .Lread_entry
         
-    .kernel_found:
+    .Lkernel_found:
         mov si, offset inf_found_kernel
         call print_line
 
         cli
         hlt
+
+
+
+print_dirname:
+    push ax
+    push bx
+    push cx
+
+    xor cx, cx
+1:
+    mov ah, 0x0E
+    mov al, gs:[DISKBUFFER_OFFSET + bx]
+
+    push bx
+    xor bx, bx
+    int 0x10
+    pop bx
+
+    inc cx
+    inc bx
+    cmp cx, 11
+    jb 1b
+
+    call new_line
+
+    pop cx
+    pop bx
+    pop ax
+
+    ret
 
 kernel_not_found:
     mov si, offset err_kernel_not_found
@@ -451,7 +493,7 @@ bad_cluster:
  * Variables
  */
 
-disk_identifier:       .hword 0
+disk_identifier:       .byte 0
 
 current_cluster_low:   .hword 0
 current_cluster_high:  .hword 0
@@ -487,7 +529,7 @@ DAP_RESERVED: .byte  0x00 /* (▀̿Ĺ̯▀̿) Nothing to see here, move along ci
 DAP_BLOCKCNT: .hword 0x00 /* Number of blocks to read */
 DAP_OFFSET:   .hword DISKBUFFER_OFFSET /* The offset of the read buffer */
 DAP_SEGMENT:  .hword DISKBUFFER_SEG    /* The segment of the read buffer */
-DAP_LBA_LOW:  .long  0x01 /* Block number, part 1. */
+DAP_LBA_LOW:  .long  0x00 /* Block number, part 1. */
 DAP_LBA_HIGH: .long  0x00 /* Block number, part 2. */
 
 /* -------------------------------------------------- */

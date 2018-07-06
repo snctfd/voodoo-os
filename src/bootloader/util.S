@@ -39,15 +39,17 @@ print_line:
  * --------------------------------------------------
  */
 print_string:
+    push ax
     cld /* Make sure we're moving the right direction */
-.loop:
+1:
     lodsb      /* Loads a byte from the string to AL */
     cmp al, 0 /* Check if AL == 0 */
-    jz .done
+    jz 2f
     mov ah, 0x0E
     int 0x10
-    jmp .loop
-.done:
+    jmp 1b
+2:
+    pop ax
     ret
 
 /*
@@ -58,6 +60,8 @@ print_string:
  * --------------------------------------------------
  */
 new_line:
+    push ax
+
     mov ah, 0x0E
     mov al, 0x0A /* Line feed */
     int 0x10
@@ -66,4 +70,5 @@ new_line:
     mov al, 0x0D /* Carriage return */
     int 0x10
 
+    pop ax
     ret
