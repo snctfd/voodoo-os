@@ -1,7 +1,7 @@
 /*
  * --------------------------------------------------
  * File: bootloader_stage2.S
- * Date: 2018-06-27
+ * Date: 2018-07-06
  * Author: snctfd (Rasmus Beck)
  *  
  * Stage two of the bootloader.
@@ -447,6 +447,8 @@ stage2_start:
     .Lkernel_found:
         mov si, offset inf_found_kernel
         call print_line
+
+        /* TODO LOAD KERNEL */
 
         cli
         hlt

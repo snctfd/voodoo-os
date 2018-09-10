@@ -1,34 +1,22 @@
 .PHONY: default clean bootloader compile setup setup-cross-compiler \
 cross-compiler-clean kernel
 
-export CROSS_COMPILER_INSTALLDIR ?= /usr/local/cross/
-export CROSS_COMPILER_TARGET ?= i686-elf
-export ASSEMBLER := $(CROSS_COMPILER_TARGET)-as
-export CROSS_COMPILER := $(CROSS_COMPILER_TARGET)-gcc
-export LINKER := $(CROSS_COMPILER_TARGET)-ld
-export PATH := $(CROSS_COMPILER_INSTALLDIR)/bin:$(PATH)
-
-export ASMOPS = -wall -msyntax=intel -mmnemonic=intel
-
-export COPS = -Wall -nostdlib -nostartfiles -ffreestanding \
-	   -Iinclude -mgeneral-regs-only -fno-exceptions -fno-rtti
-
-export LINKOPS = -ffreestanding -O2 -nostdlib -lgcc
-
 LOOPBACKDEVICE != sudo losetup -f
+
+export BASE = $(CURDIR)
 
 default: voodoo_os.img
 
 bootloader: bootloader_stage1.bin bootloader_stage2.bin
 
 bootloader_stage1.bin: force_look
-	cd src/bootloader; $(MAKE) bootloader_stage1.bin
+	cd bootloader; $(MAKE) bootloader_stage1.bin
 
 bootloader_stage2.bin: force_look
-	cd src/bootloader; $(MAKE) bootloader_stage2.bin
+	cd bootloader; $(MAKE) bootloader_stage2.bin
 
 kernel: force_look
-	cd src/kernel; $(MAKE) kernel.bin
+	cd kernel; $(MAKE) kernel.bin
 
 voodoo_os.img: compile
 	dd if=/dev/zero of=voodoo_os.img bs=504K count=1000
@@ -48,8 +36,8 @@ voodoo_os.img: compile
 
 	mkdir -p mnt/fake/
 	
-	dd if=src/bootloader/bootloader_stage1.bin of=voodoo_os.img conv=notrunc
-	dd if=src/bootloader/bootloader_stage2.bin of=voodoo_os.img conv=notrunc seek=1
+	dd if=bootloader/bootloader_stage1.bin of=voodoo_os.img conv=notrunc
+	dd if=bootloader/bootloader_stage2.bin of=voodoo_os.img conv=notrunc seek=1
 
 	sudo losetup -o1MiB $(LOOPBACKDEVICE) voodoo_os.img
 	sudo mkdosfs -v -F32 $(LOOPBACKDEVICE)
@@ -60,7 +48,7 @@ voodoo_os.img: compile
 	sudo mkdir mnt/fake/dev/
 	sudo mkdir mnt/fake/proc/
 
-	sudo cp src/kernel/kernel.bin mnt/fake/
+	sudo cp kernel/kernel.bin mnt/fake/
 
 	sleep 0.1
 
@@ -70,19 +58,19 @@ voodoo_os.img: compile
 compile: bootloader kernel
 
 clean: cross-compiler-clean
-	cd src/bootloader; $(MAKE) clean
-	cd src/kernel; $(MAKE) clean
+	cd bootloader; $(MAKE) clean
+	cd kernel; $(MAKE) clean
 
 	rm -f *.bin
 	rm -f voodoo_os.img
 
 setup-cross-compiler:
-	cd src/util/; \
+	cd util; \
 	sudo $(MAKE) binutils-make && \
 	sudo $(MAKE) gcc-make
 
 cross-compiler-clean:
-	cd src/util/; sudo $(MAKE) clean
+	cd util; $(MAKE) clean
 
 force_look:
 	true

@@ -1,5 +1,6 @@
 *.bin
 *.img
 *.log
-src/util/*
-!src/util/Makefile
+*.o
+util/*
+!util/Makefile

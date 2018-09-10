@@ -1,0 +1,3 @@
+CROSS_INSTALL_DIR ?= /usr/local/cross/
+CROSS_TARGET = x86_64-elf
+PATH := $(CROSS_INSTALL_DIR)/bin:$(PATH)
